@@ -1,9 +1,12 @@
 from fastapi import APIRouter
 
+from app.api.routes import courses, scraper
 from app.core.config import settings
 
 api_router = APIRouter()
+api_router.include_router(courses.router)
+api_router.include_router(scraper.router)
 
 if settings.ENVIRONMENT == 'dev':
-    # This is a place to put all the dev-oriented routes, such as testing endpoints, debug routes, etc.
+    # Dev-oriented routes
     pass

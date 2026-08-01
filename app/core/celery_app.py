@@ -1,13 +1,16 @@
+from datetime import timedelta
 from celery import Celery
 from app.core.config import settings
 
 celery_app = Celery(
     'magic_pinecone',
-    broker=settings.CELERY_BROKER_URL,
-    backend=settings.CELERY_BACKEND,
+    broker=settings.celery_broker_url,
+    backend=settings.celery_result_backend,
+    include=['app.tasks.course_scraper'],
 )
 
 celery_app.conf.update(
+    imports=['app.tasks.course_scraper'],
     # Timezone
     timezone='Asia/Taipei',
     enable_utc=True,
@@ -25,6 +28,14 @@ celery_app.conf.update(
     task_time_limit=660,
     task_acks_late=True,
     task_reject_on_worker_lost=True,
+
+    # Periodic Scheduled Tasks (Celery Beat)
+    beat_schedule={
+        'scrape-ncu-courses-periodic': {
+            'task': 'tasks.course_scraper.scrape_ncu_courses',
+            'schedule': timedelta(minutes=settings.SCRAPER_INTERVAL_MINUTES),
+        },
+    },
 )
 
-celery_app.autodiscover_tasks(['app.task.scraper_tasks'])
+celery_app.autodiscover_tasks(['app.tasks.course_scraper'])

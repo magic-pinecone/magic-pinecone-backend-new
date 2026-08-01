@@ -1,16 +1,32 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
+from sqlmodel import Session
 from starlette.middleware.cors import CORSMiddleware
 
+from app.api.main import api_router
 from app.core.config import settings
+from app.core.db import engine, init_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize DB tables on startup
+    with Session(engine) as session:
+        init_db(session)
+    yield
+
 
 def custom_generate_unique_id(route: APIRoute):
-    return f'{route.tags[0]}-{route.name}'
+    return f"{route.tags[0] if route.tags else 'default'}-{route.name}"
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f'{settings.API_V1_STR}/openapi.json',
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=custom_generate_unique_id,
+    lifespan=lifespan,
 )
 
 if settings.all_cors_origins:
@@ -21,3 +37,5 @@ if settings.all_cors_origins:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+app.include_router(api_router, prefix=settings.API_V1_STR)
