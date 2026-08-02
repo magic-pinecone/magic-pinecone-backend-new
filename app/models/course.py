@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
-from typing import Any
-from sqlmodel import Column, Field, JSON, SQLModel
+from datetime import UTC, datetime
+
+from sqlmodel import JSON, Column, Field, SQLModel
 
 
 class College(SQLModel, table=True):
@@ -39,6 +39,4 @@ class Course(SQLModel, table=True):
     college_ids: list[str] = Field(default=[], sa_column=Column(JSON))
     department_ids: list[str] = Field(default=[], sa_column=Column(JSON))
 
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

@@ -1,7 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from app.api.deps import SessionDep
 from app.models.course import College, Course, Department
@@ -34,7 +34,9 @@ def search_courses(
     session: SessionDep,
     department_id: str | None = Query(None, description="Filter by department ID"),
     college_id: str | None = Query(None, description="Filter by college ID"),
-    course_type: str | None = Query(None, description="Filter by course type (REQUIRED/ELECTIVE)"),
+    course_type: str | None = Query(
+        None, description="Filter by course type (REQUIRED/ELECTIVE)"
+    ),
     search: str | None = Query(None, description="Search keyword in course title"),
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),

@@ -7,6 +7,6 @@ api_router = APIRouter()
 api_router.include_router(courses.router)
 api_router.include_router(scraper.router)
 
-if settings.ENVIRONMENT == 'dev':
+if settings.ENVIRONMENT == "dev":
     # Dev-oriented routes
     pass

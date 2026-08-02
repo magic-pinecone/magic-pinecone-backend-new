@@ -2,12 +2,12 @@ import asyncio
 import logging
 import re
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import bs4
 import httpx
-from sqlmodel import Session, select
+from sqlmodel import Session
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.core.celery_app import celery_app
@@ -60,12 +60,18 @@ class NCUCourseFetcher:
         wait=wait_exponential(multiplier=1, min=1, max=10),
         reraise=True,
     )
-    async def _get(self, client: httpx.AsyncClient, url: str, params: dict | None = None) -> httpx.Response:
-        resp = await client.get(url, params=params, headers=HEADERS, follow_redirects=True, timeout=15.0)
+    async def _get(
+        self, client: httpx.AsyncClient, url: str, params: dict | None = None
+    ) -> httpx.Response:
+        resp = await client.get(
+            url, params=params, headers=HEADERS, follow_redirects=True, timeout=15.0
+        )
         resp.raise_for_status()
         return resp
 
-    async def fetch_colleges_with_departments(self, client: httpx.AsyncClient) -> tuple[list[dict], list[dict]]:
+    async def fetch_colleges_with_departments(
+        self, client: httpx.AsyncClient
+    ) -> tuple[list[dict], list[dict]]:
         """Scrape colleges and departments list from byUnion page."""
         url = f"{BASE_URL}/query/byUnion"
         resp = await self._get(client, url)
@@ -96,11 +102,13 @@ class NCUCourseFetcher:
                 dept_name = re.sub(r"\(\d+\)$", "", anchor.text.strip())
 
                 if dept_id:
-                    departments.append({
-                        "department_id": dept_id,
-                        "department_name": dept_name,
-                        "college_id": college_id,
-                    })
+                    departments.append(
+                        {
+                            "department_id": dept_id,
+                            "department_name": dept_name,
+                            "college_id": college_id,
+                        }
+                    )
 
         return colleges, departments
 
@@ -114,7 +122,9 @@ class NCUCourseFetcher:
                 resp = await self._get(client, url, params={"id": department_id})
                 root = ET.fromstring(resp.content)
             except Exception as exc:
-                logger.error(f"Error fetching course bases for dept {department_id}: {exc}")
+                logger.error(
+                    f"Error fetching course bases for dept {department_id}: {exc}"
+                )
                 return []
 
             courses = []
@@ -133,36 +143,46 @@ class NCUCourseFetcher:
                 )
 
                 teachers = [
-                    t.strip()
-                    for t in attr.get("Teacher", "").split(",")
-                    if t.strip()
+                    t.strip() for t in attr.get("Teacher", "").split(",") if t.strip()
                 ]
                 class_times = deflate_class_time(attr.get("ClassTime", ""))
 
-                limit_cnt = int(attr["limitCnt"]) if attr.get("limitCnt", "").isdigit() else None
-                admit_cnt = int(attr["admitCnt"]) if attr.get("admitCnt", "").isdigit() else 0
-                wait_cnt = int(attr["waitCnt"]) if attr.get("waitCnt", "").isdigit() else 0
+                limit_cnt = (
+                    int(attr["limitCnt"])
+                    if attr.get("limitCnt", "").isdigit()
+                    else None
+                )
+                admit_cnt = (
+                    int(attr["admitCnt"]) if attr.get("admitCnt", "").isdigit() else 0
+                )
+                wait_cnt = (
+                    int(attr["waitCnt"]) if attr.get("waitCnt", "").isdigit() else 0
+                )
 
                 credit = float(attr.get("credit", 0.0))
 
-                courses.append({
-                    "serial_no": serial_no,
-                    "class_no": class_no,
-                    "title": attr.get("Title", ""),
-                    "credit": credit,
-                    "password_card": attr.get("passwordCard", ""),
-                    "teachers": teachers,
-                    "class_times": class_times,
-                    "limit_cnt": limit_cnt,
-                    "admit_cnt": admit_cnt,
-                    "wait_cnt": wait_cnt,
-                    "college_id": college_id,
-                    "department_id": department_id,
-                })
+                courses.append(
+                    {
+                        "serial_no": serial_no,
+                        "class_no": class_no,
+                        "title": attr.get("Title", ""),
+                        "credit": credit,
+                        "password_card": attr.get("passwordCard", ""),
+                        "teachers": teachers,
+                        "class_times": class_times,
+                        "limit_cnt": limit_cnt,
+                        "admit_cnt": admit_cnt,
+                        "wait_cnt": wait_cnt,
+                        "college_id": college_id,
+                        "department_id": department_id,
+                    }
+                )
 
             return courses
 
-    async def fetch_all_course_extras(self, client: httpx.AsyncClient) -> dict[int, str]:
+    async def fetch_all_course_extras(
+        self, client: httpx.AsyncClient
+    ) -> dict[int, str]:
         """Fetch course types (REQUIRED/ELECTIVE) across paginated byKeywords pages."""
         url = f"{BASE_URL}/query/byKeywords"
         extras: dict[int, str] = {}
@@ -170,7 +190,9 @@ class NCUCourseFetcher:
 
         while True:
             try:
-                resp = await self._get(client, url, params={"d-49489-p": page_no, "query": "true"})
+                resp = await self._get(
+                    client, url, params={"d-49489-p": page_no, "query": "true"}
+                )
             except Exception as exc:
                 logger.error(f"Error fetching course extras page {page_no}: {exc}")
                 break
@@ -206,11 +228,15 @@ class NCUCourseFetcher:
         async with httpx.AsyncClient() as client:
             logger.info("Fetching colleges and departments...")
             colleges, departments = await self.fetch_colleges_with_departments(client)
-            logger.info(f"Found {len(colleges)} colleges and {len(departments)} departments.")
+            logger.info(
+                f"Found {len(colleges)} colleges and {len(departments)} departments."
+            )
 
             # Concurrently fetch XMLs for all departments
             tasks = [
-                self.fetch_course_bases(client, dept["department_id"], dept["college_id"])
+                self.fetch_course_bases(
+                    client, dept["department_id"], dept["college_id"]
+                )
                 for dept in departments
             ]
             dept_course_lists = await asyncio.gather(*tasks)
@@ -272,7 +298,9 @@ def _update_task_progress(task: Any, state: str, meta: dict):
 def scrape_ncu_courses(self: Any, save_to_db: bool = True) -> dict[str, Any]:
     """Celery task to trigger NCU course scraping and update database."""
     logger.info("Starting NCU course scraping Celery worker task...")
-    _update_task_progress(self, state="PROGRESS", meta={"status": "Fetching live course data from NCU..."})
+    _update_task_progress(
+        self, state="PROGRESS", meta={"status": "Fetching live course data from NCU..."}
+    )
 
     fetcher = NCUCourseFetcher(concurrency_limit=10)
     data = asyncio.run(fetcher.fetch_all_data())
@@ -286,8 +314,10 @@ def scrape_ncu_courses(self: Any, save_to_db: bool = True) -> dict[str, Any]:
     )
 
     if save_to_db:
-        _update_task_progress(self, state="PROGRESS", meta={"status": "Updating database..."})
-        now = datetime.now(timezone.utc)
+        _update_task_progress(
+            self, state="PROGRESS", meta={"status": "Updating database..."}
+        )
+        now = datetime.now(UTC)
 
         with Session(engine) as session:
             # 1. UPSERT Colleges

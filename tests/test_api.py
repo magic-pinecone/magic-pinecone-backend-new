@@ -19,7 +19,9 @@ def session_fixture():
     with Session(engine) as session:
         # Seed test data
         college = College(college_id="collegeI0", college_name="文學院")
-        dept = Department(department_id="dept1001", department_name="中文系", college_id="collegeI0")
+        dept = Department(
+            department_id="dept1001", department_name="中文系", college_id="collegeI0"
+        )
         course = Course(
             serial_no=1001,
             class_no="112100-1",

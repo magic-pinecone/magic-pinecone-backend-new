@@ -1,4 +1,4 @@
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine
 
 from app.core.config import settings
 from app.models import College, Course, Department  # noqa: F401

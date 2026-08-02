@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from app.core.celery_app import celery_app
@@ -12,7 +12,9 @@ router = APIRouter(prefix="/scraper", tags=["scraper"])
 
 
 class ScheduleUpdateRequest(BaseModel):
-    interval_minutes: int = Field(..., ge=1, le=43200, description="Crawling interval in minutes")
+    interval_minutes: int = Field(
+        ..., ge=1, le=43200, description="Crawling interval in minutes"
+    )
 
 
 @router.post("/trigger", response_model=dict[str, Any])
