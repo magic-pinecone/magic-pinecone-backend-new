@@ -1,0 +1,72 @@
+version: 2
+updates:
+  # Python 依賴更新 (使用 uv 套件管理器)
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Asia/Taipei"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
+      - "uv"
+    groups:
+      # 1. Web & API 框架類
+      web-frameworks:
+        patterns:
+          - "fastapi*"
+          - "uvicorn*"
+          - "pydantic*"
+          - "httpx*"
+
+      # 2. 資料庫與快取類
+      database-storage:
+        patterns:
+          - "alembic*"
+          - "sqlmodel*"
+          - "psycopg*"
+          - "redis*"
+
+      # 3. 異步任務隊列類
+      task-queue:
+        patterns:
+          - "celery*"
+
+      # 4. 爬蟲與解析工具類
+      scraping-tools:
+        patterns:
+          - "selectolax*"
+          - "lxml*"
+          - "beautifulsoup4*"
+          - "tenacity*"
+
+      # 5. 開發測試與 Lint 類
+      dev-tools:
+        patterns:
+          - "pytest*"
+          - "ruff*"
+
+      # 其他未歸類 Python 套件統一打包
+      other-python-deps:
+        patterns:
+          - "*"
+
+  # GitHub Actions Workflow 動作版本更新
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Asia/Taipei"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      actions-dependencies:
+        patterns:
+          - "*"
